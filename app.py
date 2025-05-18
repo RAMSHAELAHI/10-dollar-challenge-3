@@ -1,13 +1,12 @@
 # app.py
-import sqlite3
-import streamlit as st # type: ignore
+import streamlit as st
 import datetime 
-import numpy as np # type: ignore # Needed to convert BLOB back to numpy array for face encoding
+import numpy as np # Needed to convert BLOB back to numpy array for face encoding
 
 # Import functions/classes from your new files
 from database import get_db_connection, setup_database, get_user_role
 from utils import display_error, display_success, validate_input, Course
-from features import recognize_face, process_payment, generate_id_card, get_face_encoding_from_photo # type: ignore
+from features import recognize_face, process_payment, generate_id_card, get_face_encoding_from_photo
 
 # --- Main Streamlit App ---
 def main():
@@ -26,9 +25,14 @@ def main():
     # --- Login Section ---
     if not st.session_state['logged_in']:
         st.subheader("Login")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        login_button = st.button("Login")
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
+        
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            login_button = st.button("Login")
+        with col2:
+            forgot_password_button = st.button("Forgot Password?")
 
         if login_button:
             with get_db_connection() as cursor:
@@ -44,6 +48,13 @@ def main():
                 st.experimental_rerun()
             else:
                 st.error("Invalid credentials")
+        
+        if forgot_password_button:
+            st.info("If you forgot your password, please contact the administrator (e.g., admin@giaic.edu.pk) for assistance.")
+            st.info("Remember the default credentials: **admin** / **admin123** or **student** / **student123**")
+            st.markdown("---") # Visual separator
+
+
     else:
         st.sidebar.write(f"Welcome, {st.session_state['user_name']} ({st.session_state['role'].title()})!")  # Show role
         if st.sidebar.button("Logout"):
@@ -68,8 +79,9 @@ def main():
             st.write("#### Register / Update Your Information")
             with st.form(key="student_form"):
                 name = st.text_input("Name")
-                roll_no = st.text_input("Roll No")
-                email = st.text_input("Email")
+                # Highlight existing email and roll number fields
+                roll_no = st.text_input("Roll No") 
+                email = st.text_input("Email") 
                 slot = st.text_input("Slot")
                 contact = st.text_input("Contact")
                 
@@ -110,8 +122,8 @@ def main():
                                 display_success("Face detected and encoded successfully from your photo!")
                             else:
                                 display_error(f"Could not process photo for face ID: {msg}. Please ensure a clear face is visible.")
-                                # You might want to prevent submission if face encoding is critical
-                                # For now, we allow submission without face_encoding if it fails.
+                                # For demo, we allow submission without face_encoding if it fails.
+                                # In a real app, you might want to prevent it or warn strongly.
 
                         with get_db_connection() as cursor:
                             cursor.execute("SELECT id FROM students WHERE user_id = ?", (st.session_state['user_id'],))
@@ -163,8 +175,8 @@ def main():
 
                 st.subheader("Your Profile")
                 st.write(f"**Name:** {student_dict['name']}")
-                st.write(f"**Roll No:** {student_dict['roll_no']}")
-                st.write(f"**Email:** {student_dict['email']}")
+                st.write(f"**Roll No:** {student_dict['roll_no']}") # Displaying roll number
+                st.write(f"**Email:** {student_dict['email']}")     # Displaying email
                 st.write(f"**Slot:** {student_dict['slot']}")
                 st.write(f"**Contact:** {student_dict['contact']}")
                 st.write(f"**Course:** {student_dict['course']}")
@@ -216,7 +228,7 @@ def main():
                             else:
                                 display_error(f"Face recognition failed: {message}")
                         else:
-                            display_warning("No face data registered for your profile. Please upload a profile photo with a clear face first.") # type: ignore
+                            st.warning("No face data registered for your profile. Please upload a profile photo with a clear face first.")
                 else:
                     st.info("Please take a photo to mark your attendance.")
 
@@ -325,7 +337,7 @@ def main():
                     if new_course_name:
                         with get_db_connection() as cursor:
                             try:
-                                cursor.execute("INSERT INTO courses (name) VALUES (?)", (new_course_name,))
+                                cursor.execute("INSERT OR IGNORE INTO courses (name) VALUES (?)", (new_course_name,))
                                 display_success(f"Course '{new_course_name}' added successfully!")
                             except sqlite3.IntegrityError:
                                 display_error(f"Course '{new_course_name}' already exists.")
@@ -348,7 +360,7 @@ def main():
                     if new_teacher_name:
                         with get_db_connection() as cursor:
                             try:
-                                cursor.execute("INSERT INTO teachers (name) VALUES (?)", (new_teacher_name,))
+                                cursor.execute("INSERT OR IGNORE INTO teachers (name) VALUES (?)", (new_teacher_name,))
                                 display_success(f"Teacher '{new_teacher_name}' added successfully!")
                             except sqlite3.IntegrityError:
                                 display_error(f"Teacher '{new_teacher_name}' already exists.")
