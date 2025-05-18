@@ -17,7 +17,7 @@ def get_db_connection():
         conn.close()
 
 def setup_database():
-    """Sets up the database schema (tables)."""
+    """Sets up the database schema (tables) and populates initial data."""
     with get_db_connection() as cursor:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -39,7 +39,7 @@ def setup_database():
                 course_id INTEGER NOT NULL,
                 favorite_teacher_id INTEGER NOT NULL,
                 photo BLOB,
-                face_encoding BLOB, -- New column for face encoding
+                face_encoding BLOB, -- This column stores the numerical face data
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 FOREIGN KEY (course_id) REFERENCES courses(id),
                 FOREIGN KEY (favorite_teacher_id) REFERENCES teachers(id)
@@ -75,13 +75,14 @@ def setup_database():
             )
         """)
 
-        # Insert initial courses and teachers if they don't exist
+        # Insert initial courses if they don't exist
         for course_name in ["Python", "Typescript", "Next.js"]:
             cursor.execute("INSERT OR IGNORE INTO courses (name) VALUES (?)", (course_name,))
+        # Insert initial teachers if they don't exist
         for teacher_name in ["Sir Zia", "Madam Hira", "Sir Inam"]:
             cursor.execute("INSERT OR IGNORE INTO teachers (name) VALUES (?)", (teacher_name,))
         
-        # Insert a dummy admin user and student user if they don't exist
+        # Insert default admin and student users if they don't exist
         cursor.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "admin"))
         cursor.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ("student", "student123", "student"))
 
